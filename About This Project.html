@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shu Bank - Secure Banking App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background: #1e3a8a;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.8rem;
+        }
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-top: 8px;
+        }
+        .content {
+            padding: 40px;
+        }
+        h2 {
+            color: #1e3a8a;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        ul {
+            line-height: 2.0;
+            font-size: 1.1rem;
+        }
+        li {
+            margin-bottom: 12px;
+        }
+        .highlight {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #1e3a8a;
+            color: white;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Shu Bank</h1>
+            <p class="subtitle">Secure & Modern Banking API using Spring Boot</p>
+        </header>
+
+        <div class="content">
+            <h2>Current Features Implemented</h2>
+            <ul>
+                <li>✅ Create New Bank Account</li>
+                <li>✅ Get Single Account Details</li>
+                <li>✅ Get All Accounts</li>
+                <li>✅ Check Account Balance</li>
+                <li>✅ Deposit Money</li>
+                <li>✅ Withdraw Money</li>
+                <li>✅ Fund Transfer (User to User)</li>
+                <li>✅ Transaction History by Account</li>
+                <li>✅ Get Single Transaction by ID</li>
+                <li>✅ Mini Statement (Last 5 transactions)</li>
+                <li>✅ Full Statement (with totals)</li>
+                <li>✅ Full Statement as PDF Download</li>
+                <li>✅ Update Account Details</li>
+                <li>✅ Delete Account</li>
+            </ul>
+
+            <div class="highlight">
+                <h2>Recently Added</h2>
+                <p><strong>Fixed Deposit (FD) Creation</strong> – Users can now open Fixed Deposits with proper interest calculation and maturity tracking.</p>
+            </div>
+
+            <h2>Tech Stack</h2>
+            <ul>
+                <li>Spring Boot 3+</li>
+                <li>Spring Data JPA + Hibernate</li>
+                <li>MySQL Database</li>
+                <li>Lombok</li>
+                <li>iText 8 (for PDF generation)</li>
+                <li>Tomcat Embedded Server</li>
+            </ul>
+        </div>
+
+        <footer>
+            Built with ❤️ by Shu Baby &amp; Molly<br>
+            A learning project to showcase clean Spring Boot architecture
+        </footer>
+    </div>
+</body>
+</html>

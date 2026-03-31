@@ -1,0 +1,1162 @@
+package com.chh_shu.banking_app.Controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.chh_shu.banking_app.Models.Account;
+import com.chh_shu.banking_app.Models.FixedDeposit;
+import com.chh_shu.banking_app.Models.Transaction;
+import com.chh_shu.banking_app.Service.AccountService;
+import com.chh_shu.banking_app.Service.FdService;
+import com.chh_shu.banking_app.Service.TransactionService;
+
+
+@RestController
+public class MyController {
+    
+    @Autowired
+    AccountService accService;
+    
+    @Autowired
+    TransactionService txnService;
+    
+    @Autowired
+    FdService fdService;
+
+    // @Autowired
+    // PdfService pdfService;
+
+    @RequestMapping("hello")
+    public String welcome(@RequestParam String name) {
+        return "Hello "+ name;
+    }
+    
+    // Create
+    @PostMapping("account")
+    public String createNewAccount(@RequestBody Account account) {
+        accService.createAccount(account);
+        return "Account Created Sucessfully";
+    }
+    
+    // Read - Get single account by account number
+    @GetMapping("/account/{accountNo}")
+    public Account getAccount(@PathVariable Long accountNo) {
+        return accService.getAccountById(accountNo);
+    }
+
+    @GetMapping("/account/balance-check")
+    public String checkBalance(@RequestParam Long accountNo) {
+        return accService.checkBalance(accountNo);
+    }
+    
+    @GetMapping("/accounts")
+    public List<Account> getAllAccounts(){
+        return accService.getAllAccounts();
+    }
+
+    @GetMapping("/transaction/by-account")
+    public List<Transaction> getTransactionByAccount(@RequestParam Long accountNo) {
+        return txnService.getTransactionsByAccount(accountNo);
+    }
+
+    @GetMapping("/transaction/{txnId}")
+    public Transaction getTransactionById(@PathVariable Long txnId){
+        return txnService.getTransactionById(txnId);
+        
+    }
+
+    // Mini Statement - Last 5 transactions
+    @GetMapping("/account/{accNo}/mini-statement")
+    public List<Transaction> getMiniStatement(@PathVariable Long accNo) {
+        return txnService.getMiniStatement(accNo);
+    }
+    // Full Statement - Last 5 transactions
+    @GetMapping("/account/{accNo}/full-statement")
+    public List<Transaction> getFullStatement(@PathVariable Long accNo) {
+        return txnService.getFullStatement(accNo);
+    }
+    
+    @GetMapping("/account/{accountNo}/statement/pdf")
+    public ResponseEntity<byte[]> downloadStatementPDF(@PathVariable Long accountNo) {
+        byte[] pdfBytes = txnService.generateFullStatementPdf(accountNo);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, 
+                        "attachment; filename=statement_" + accountNo + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+    }
+
+    // Update
+    @PutMapping("account/{accountNo}")
+    public String updateExistingAccount(@PathVariable Long accountNo, @RequestBody Account account){
+        if( accService.updateAccount(accountNo, account)){
+            return "Account Updated Sucessfully";
+        }else return "Something went Wrong";
+    }
+
+    @PostMapping("/deposit")
+    public String depositMoney(@RequestParam Long accountNo, @RequestParam double amount, @RequestParam(required = false) String description) {
+        return txnService.deposit(accountNo, amount, description);
+    }
+
+    @PostMapping("/withdraw")
+    public String withdrawMoney(@RequestParam Long accountNo, @RequestParam double amount, @RequestParam(required = false) String description) {
+        return txnService.withdraw(accountNo, amount, description);
+    }
+
+    @PostMapping("/transfer")
+    public String transferMoney(@RequestParam Long fromAccNo, @RequestParam Long toAccNo, @RequestParam double amount, @RequestParam(required = false) String description) {
+        return txnService.transfer(fromAccNo, toAccNo, amount, description);
+    }
+    @PostMapping("/create-fd")
+    public String createFixedDeposit(@RequestBody FixedDeposit fd) {
+        return fdService.createFixedDeposit(fd);
+    }
+    
+    
+
+    // Delete
+    @DeleteMapping("account/{accountNo}")
+    public String deleteAccount(@PathVariable Long accountNo){
+        if(accService.deleteAccount(accountNo)){
+            return "Account Deleted Sucessfully";
+        }else return "Account not Found";
+    }
+
+}
+
+
+package com.chh_shu.banking_app.DAO;
+
+import java.util.List;
+
+import com.chh_shu.banking_app.Models.Account;
+
+// @Repository
+public interface AccountDAO {
+    // Create
+    String addAccount(Account account);
+
+    // Read 
+    List<Account> getAllAccounts();
+    Account getAccountById(Long accountNo);
+
+    // Update
+    boolean updateAccount(Long accountNo, Account account);
+
+    // Delete
+    boolean deleteAccount(Long accountNo);
+}
+
+
+package com.chh_shu.banking_app.DAO;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.chh_shu.banking_app.Entity.AccountEntity;
+import com.chh_shu.banking_app.Entity.AccountRepo;
+import com.chh_shu.banking_app.Models.Account;
+
+@Repository
+public class AccountDaoImp implements AccountDAO {
+
+    @Autowired
+    private AccountRepo accountRepo; 
+    
+     
+    @Override
+    public String addAccount(Account account) {
+        System.out.println("\nAdd Account is called \n");
+        AccountEntity accEntity = new AccountEntity();
+        BeanUtils.copyProperties(account, accEntity);
+        
+        accountRepo.save(accEntity);
+        return "Account Saved Sucessfully";
+    }
+    
+    @Override
+    public List<Account> getAllAccounts() {
+        System.out.println("GetAllAccounts is called\n");
+        List<AccountEntity> accountList = accountRepo.findAll();
+        List<Account> accounts = new ArrayList<>();
+        if(!accountList.isEmpty()){
+            for(AccountEntity accountEntity: accountList){
+                accounts.add(entityToModel(accountEntity));
+            }
+            return accounts;
+            
+        }else{ return null;}
+    }
+    
+    @Override
+    public Account getAccountById(Long accountNo) {
+        System.out.println("getAccountById is called\n");
+        Optional<AccountEntity> optionalEntity = accountRepo.findById(accountNo);
+        if(optionalEntity.isPresent()){
+            AccountEntity accEntity = optionalEntity.get();
+            return entityToModel(accEntity);
+        }
+        return null;
+    }
+
+    @Override
+    public boolean updateAccount(Long accountNo, Account account) {
+        System.out.println();
+        System.out.println("Update Account method called");
+        System.out.println();
+        Optional<AccountEntity> optionalEntity = accountRepo.findById(accountNo);
+        if(optionalEntity.isPresent()){
+            AccountEntity existingAccount = optionalEntity.get();
+            // BeanUtils.copyProperties(account, existingAccount); // This is copying everything including accountNo, which is causing error
+            existingAccount.setName(account.getName());
+            existingAccount.setBalance(account.getBalance());
+            existingAccount.setType(account.getType());
+            
+            accountRepo.save(existingAccount);
+            System.out.println();
+            System.out.println("Account updated successfully!");
+            System.out.println();
+            return true;
+        }else {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteAccount(Long accountNo) {
+        System.out.println();
+        System.out.println();
+        System.out.println("Delete Account is Called");
+        System.out.println();
+        System.out.println();
+        Optional<AccountEntity> optionalEntity = accountRepo.findById(accountNo);
+        if(optionalEntity.isPresent()){
+            accountRepo.deleteById(accountNo);
+            return true;  
+        }else return false;
+    }
+    private Account entityToModel(AccountEntity entity){
+        if(entity == null) return null;
+        Account account = new Account(); 
+        account.setAccountNo(entity.getAccountNo());
+        account.setName(entity.getName());
+        account.setType(entity.getType());
+        account.setBalance(entity.getBalance());
+        account.setCreatedDate(entity.getCreatedDate());
+        account.setStatus(entity.getAccStatus() != null ? entity.getAccStatus().name() : "WORKING");
+
+        return account;
+    }
+    
+}
+
+
+package com.chh_shu.banking_app.DAO;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import com.chh_shu.banking_app.Models.FixedDeposit;
+
+public interface FixedDepositDAO {
+        // Create
+    String saveFd(Long accountNo, double principalAmount, int tenureMonths, double interestRate, LocalDate maturityDate, double maturityAmount);
+    // Read 
+    List<FixedDeposit> getFDByAccount();
+    FixedDeposit getFDById(Long fdId);
+
+    // Update
+    boolean updateFD(Long fdId, String status);
+
+    // Delete
+    boolean closeFD (Long fdId);
+}
+
+
+package com.chh_shu.banking_app.DAO;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.chh_shu.banking_app.Entity.FixedDepositEntity;
+import com.chh_shu.banking_app.Entity.FixedDepositRepo;
+import com.chh_shu.banking_app.Models.FixedDeposit;
+
+@Repository
+public class FixedDepositDAOImp implements FixedDepositDAO {
+
+    @Autowired
+    private FixedDepositRepo fdRepo;
+
+    @Override
+    public String saveFd(Long accountNo, double principalAmount, int tenureMonths, double interestRate,
+            LocalDate maturityDate, double maturityAmount) {
+        FixedDepositEntity fdEntity = new FixedDepositEntity();
+        fdEntity.setAccountNo(accountNo);
+        fdEntity.setPrincipalAmount(principalAmount);
+        fdEntity.setTenureMonths(tenureMonths);
+        fdEntity.setInterestRate(interestRate);
+        fdEntity.setMaturityDate(maturityDate);
+        fdEntity.setMaturityAmount(maturityAmount);
+        // fdEntity.setStatus(" ");
+        fdRepo.save(fdEntity);
+
+        return String.format("""
+            Fixed Deposit created successfully!
+            For Account No: : %d
+            Principal: \u20b9%.2f
+            Tenure: %d months
+            Interest Rate: %.2f%%
+            Maturity Amount: \u20b9%.2f
+            Maturity Date: %s""",
+            accountNo, principalAmount, tenureMonths, interestRate, maturityAmount, maturityDate);
+    }
+
+    @Override
+    public List<FixedDeposit> getFDByAccount() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getFDByAccount'");
+    }
+
+    @Override
+    public FixedDeposit getFDById(Long fdId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getFDById'");
+    }
+
+    @Override
+    public boolean updateFD(Long fdId, String status) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'updateFD'");
+    }
+
+    @Override
+    public boolean closeFD(Long fdId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'closeFD'");
+    }
+    
+}
+
+
+package com.chh_shu.banking_app.DAO;
+
+import java.util.List;
+
+import com.chh_shu.banking_app.Models.Transaction;
+
+public interface TransactionDAO {
+    void saveTransaction(Transaction txn);
+    List<Transaction> getTransactionsByAccount(Long accountNo);
+    Transaction getTransactionById(Long txnId);
+    // List<Transaction> getMiniStatement(Long accountNo);
+
+}
+
+
+package com.chh_shu.banking_app.DAO;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Optional;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.chh_shu.banking_app.Entity.TransactionEntity;
+import com.chh_shu.banking_app.Entity.TransactionRepo;
+import com.chh_shu.banking_app.Models.Transaction;
+
+@Repository
+public class TransactionDaoImp implements TransactionDAO{
+
+    @Autowired
+    private TransactionRepo txnRepo;
+    
+    @Override
+    public void saveTransaction(Transaction txn) {
+        System.out.println("Saving Transaction");
+        TransactionEntity txnEntity =  new TransactionEntity();
+        BeanUtils.copyProperties(txn, txnEntity);
+        txnRepo.save(txnEntity);
+    }
+
+    @Override
+    public List<Transaction> getTransactionsByAccount(Long accountNo) {
+        List<Transaction> txns = new ArrayList<>();
+        List<TransactionEntity> txnsList = txnRepo.findAll();
+        for(TransactionEntity txnEntity: txnsList){
+            if(!txnsList.isEmpty() && accountNo.equals(txnEntity.getAccountNo())){
+                Transaction txn = new Transaction();
+                BeanUtils.copyProperties(txnEntity, txn);
+                txns.add(txn);
+            }
+        }
+        return txns;
+    }
+
+    @Override
+    public Transaction getTransactionById(Long txnId) {
+        Transaction txn = new Transaction();
+        Optional<TransactionEntity> optTxnEntity = txnRepo.findById(txnId);
+        if(!optTxnEntity.isEmpty()){
+            TransactionEntity txnEntity = optTxnEntity.get();
+            BeanUtils.copyProperties(txnEntity, txn);
+            return txn;
+        }else{
+            return null;
+        }
+    }
+    
+}
+
+
+package com.chh_shu.banking_app.Entity;
+
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.chh_shu.banking_app.Models.Account.AccountStatus;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
+
+@Entity
+@Table(name = "accounts")
+@Data
+public class AccountEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "account_no")
+    private Long accountNo;
+
+    private String name;
+    private String type;
+    private double balance;
+
+    @CreationTimestamp
+    @Column(name = "created_date", updatable = false)
+    private LocalDateTime createdDate;
+
+    // 🔥 Yahan bhi add karo + default value
+    // @Column(name = "status", nullable = false)
+    // private String status = "WORKING";     // Default value
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private AccountStatus accStatus = AccountStatus.WORKING;
+
+    // public enum AccountStatus {
+    //     WORKING,
+    //     BLOCKED,
+    //     CLOSED,
+    //     FROZEN
+    // }
+}
+
+package com.chh_shu.banking_app.Entity;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface AccountRepo extends JpaRepository<AccountEntity, Long> {
+    
+}
+
+
+package com.chh_shu.banking_app.Entity;
+
+import java.time.LocalDateTime;
+import java.time.LocalDate;
+
+import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import lombok.Data;
+
+
+@Entity
+@Table(name = "fixed_deposits")
+@Data
+public class FixedDepositEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name= "fd_id")
+    private Long fdId;
+
+    private Long accountNo;
+
+    private double principalAmount; 
+    private int tenureMonths;
+    private double interestRate;
+
+    private LocalDate maturityDate;
+    private double maturityAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private FDStatus status = FDStatus.ACTIVE;
+
+    @CreationTimestamp
+    private LocalDateTime creattedAt;
+
+    public enum FDStatus{
+        ACTIVE, MATURED, PREMATURELY_CLOSED
+    }
+}
+
+
+
+package com.chh_shu.banking_app.Entity;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface FixedDepositRepo extends JpaRepository<FixedDepositEntity, Long> {
+    
+}
+
+package com.chh_shu.banking_app.Entity;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
+
+@Data
+@Entity
+@Table(name="transaction")
+public class TransactionEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "txn_id")
+    private Long txnId;
+
+    private Long accountNo;           // jis account pe transaction hui
+    private String txnType;           // DEPOSIT, WITHDRAW, TRANSFER_DEBIT, TRANSFER_CREDIT
+    private double amount;
+    private double balanceAfter;
+    private Long oppositeAccount;     // transfer ke case mein doosra account, warna null
+    private LocalDateTime timestamp;
+    private String description;
+     
+    // public enum AccountType{
+    //     Saving, Current , FD, Loan
+    // };
+}
+
+
+package com.chh_shu.banking_app.Entity;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface TransactionRepo extends JpaRepository<TransactionEntity, Long> {
+    
+}
+
+
+package com.chh_shu.banking_app.Models;
+
+import java.time.LocalDateTime;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Account {
+
+    private Long accountNo;
+    private String name;
+    private String type;
+    private double balance;
+    
+    private LocalDateTime createdDate;
+
+    // 🔥 Naya field
+    private String status;   // Default: "WORKING"
+    public enum AccountStatus {
+        WORKING,
+        BLOCKED,
+        CLOSED,
+        FROZEN
+    }
+}
+
+package com.chh_shu.banking_app.Models;
+
+import java.time.LocalDate;
+
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class FixedDeposit {
+    private Long fdId;
+    private Long accountNo;
+    private Double principalAmount;
+    private Double interestRate;
+    private Double maturityAmount;
+    private int tenureMonths;
+    private LocalDate maturityDate;
+    private String status;
+
+}
+
+
+package com.chh_shu.banking_app.Models;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class StatementResponse {
+    private Long accountNo;
+    private String accountHolderName;
+    private String accountType;
+    private double currentBalance;
+
+    private double totalCredit;
+    private double totalDebit;
+
+    private LocalDateTime fromDate;
+    private LocalDateTime toDate;
+
+    private List<Transaction> txns;
+}
+
+
+package com.chh_shu.banking_app.Models;
+
+import java.time.LocalDateTime;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Transaction {
+    private Long txnId;
+
+    private Long accountNo;           // jis account pe transaction hui
+    private String txnType;           // DEPOSIT, WITHDRAW, TRANSFER_DEBIT, TRANSFER_CREDIT
+    private double amount;
+    private double balanceAfter;
+    private Long oppositeAccount;     // transfer ke case mein doosra account, warna null
+    private LocalDateTime timestamp;
+    private String description;
+    
+}
+
+
+package com.chh_shu.banking_app.Service;
+
+import java.util.List;
+
+import com.chh_shu.banking_app.Models.Account;
+
+public interface AccountService {
+    String createAccount(Account account);
+    Account getAccountById(Long accountNo);
+    List<Account> getAllAccounts();
+    boolean updateAccount(Long accountNo, Account account);
+    boolean deleteAccount(Long accountNo);
+    String checkBalance(Long accountNo);
+}
+
+
+package com.chh_shu.banking_app.Service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.chh_shu.banking_app.DAO.AccountDAO;
+import com.chh_shu.banking_app.Models.Account;
+
+@Service
+public class AccountServiceImp implements AccountService {
+
+    @Autowired
+    private AccountDAO accDAO;
+    
+    @Override
+    public String createAccount(Account account) {
+        return accDAO.addAccount(account);
+    }
+
+    @Override
+    public Account getAccountById(Long accountNo) {
+        return accDAO.getAccountById(accountNo);
+    }
+
+    @Override
+    public List<Account> getAllAccounts() {
+        return accDAO.getAllAccounts();
+    }
+
+    @Override
+    public boolean updateAccount(Long accountNo, Account account) {
+        Account acc = accDAO.getAccountById(accountNo);
+        if(acc == null) return false;
+        
+        return accDAO.updateAccount(acc.getAccountNo(), account);
+    }
+
+    @Override
+    public boolean deleteAccount(Long accountNo) {
+        return accDAO.deleteAccount(accountNo);
+    }
+
+    @Override
+    public String checkBalance(Long accountNo) {
+        Account acc = accDAO.getAccountById(accountNo);
+        if(acc == null) return "Account not Found";
+
+        return "Current Balance\nRs " + acc.getBalance();
+    }
+    
+}
+
+
+package com.chh_shu.banking_app.Service;
+
+import java.util.List;
+
+import com.chh_shu.banking_app.Models.FixedDeposit;
+
+public interface FdService {
+    // Fixed Deposit
+    String createFixedDeposit(FixedDeposit fd);
+    List<FixedDeposit> getAllFDsByAccouunt(Long accountNo);
+    FixedDeposit getFDById(Long fdId);
+}
+
+
+package com.chh_shu.banking_app.Service;
+
+import java.util.List;
+import java.time.LocalDate;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.chh_shu.banking_app.DAO.AccountDAO;
+import com.chh_shu.banking_app.DAO.FixedDepositDAO;
+import com.chh_shu.banking_app.Models.Account;
+import com.chh_shu.banking_app.Models.FixedDeposit;
+
+@Service
+public class FdServiceImp implements FdService {
+
+    @Autowired
+    private AccountDAO accDAO;
+    
+    @Autowired
+    private TransactionService txnService;
+
+    @Autowired
+    private FixedDepositDAO fdDAO;
+
+    public static final Long BANK_ACCOUNT_NO = 9999999999L;
+    public static final double RATE = 7.0;
+
+    
+    @Override
+    @Transactional
+    public String createFixedDeposit(FixedDeposit fd) {
+
+        Long accountNo = fd.getAccountNo();
+        double principalAmount = fd.getPrincipalAmount();
+        int tenureMonths = fd.getTenureMonths();
+        double interestRate = RATE;
+        // double maturityAmount = fd.getMaturityAmount();
+        // Validation
+        if(principalAmount <= 0) return "Amount must be greater than Zero";
+
+        if(tenureMonths < 1) return "Tenure Month must be greater than one Months";
+
+        Account acc = accDAO.getAccountById(accountNo);
+        if(acc == null) return "Account Not Found";
+        if(acc.getBalance() < principalAmount) return "Insufficeint Balance in Account";
+
+        // Money Transfer
+        txnService.transfer(accountNo, BANK_ACCOUNT_NO, principalAmount, "Fixed Deposit Created");
+
+        // Interest Calculation
+        double interest = (principalAmount * interestRate * tenureMonths) / 1200;
+        double maturityAmount = principalAmount + interest;
+        LocalDate maturityDate = LocalDate.now().plusMonths(tenureMonths);
+
+        // Saving FD
+        return fdDAO.saveFd(accountNo, principalAmount, tenureMonths, RATE, maturityDate, maturityAmount);
+    }
+
+    @Override
+    public List<FixedDeposit> getAllFDsByAccouunt(Long accountNo) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAllFDsByAccouunt'");
+    }
+
+    @Override
+    public FixedDeposit getFDById(Long fdId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getFDById'");
+    }
+
+    // public FixedDeposit
+    
+}
+
+
+package com.chh_shu.banking_app.Service;
+
+import java.util.List;
+
+import com.chh_shu.banking_app.Models.StatementResponse;
+import com.chh_shu.banking_app.Models.Transaction;
+
+public interface TransactionService {
+    
+    String deposit(Long accountNo, double amount, String description);
+    
+    String withdraw(Long accountNo, double amount, String description);
+    
+    String transfer(Long fromAccNo, Long toAccNo, double amount, String description);
+
+    List<Transaction> getTransactionsByAccount(Long accountNo);
+    
+    Transaction getTransactionById(Long txnId);
+
+    List<Transaction> getMiniStatement(Long accountNo);
+    
+    List<Transaction> getFullStatement(Long accountNo);
+    StatementResponse getFullStatements(Long accountNo);
+    byte[] generateFullStatementPdf(Long accountNo);
+
+    
+    
+}
+
+
+package com.chh_shu.banking_app.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.chh_shu.banking_app.DAO.AccountDAO;
+import com.chh_shu.banking_app.DAO.TransactionDAO;
+import com.chh_shu.banking_app.Models.Account;
+import com.chh_shu.banking_app.Models.StatementResponse;
+import com.chh_shu.banking_app.Models.Transaction;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;                    // ← ByteArrayOutputStream
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+
+@Service
+public class TransactionServiceImp implements TransactionService {
+
+    @Autowired
+    private AccountDAO accDAO;
+
+    @Autowired   // ← yeh missing tha baby!
+    private TransactionDAO txnDAO;
+
+    // ==================== DEPOSIT ====================
+    @Override
+    @Transactional
+    public String deposit(Long accountNo, double amount, String description) {
+        if (amount <= 0) return "Amount must be greater than Zero";
+
+        Account acc = accDAO.getAccountById(accountNo);
+        if (acc == null) return "Account not found";
+
+        double newBalance = acc.getBalance() + amount;
+        acc.setBalance(newBalance);
+        accDAO.updateAccount(accountNo, acc);
+
+        saveTransaction(accountNo, "DEPOSIT", amount, newBalance, null, description);
+
+        return "₹" + amount + " deposited successfully.\nNew Balance: ₹" + newBalance;
+    }
+
+    // ==================== WITHDRAW ====================
+    @Override
+    @Transactional
+    public String withdraw(Long accountNo, double amount, String description) {
+        if (amount <= 0) return "Amount must be greater than Zero";
+
+        Account acc = accDAO.getAccountById(accountNo);
+        if (acc == null) return "Account not found";
+        if (acc.getBalance() < amount) return "Insufficient Balance";
+
+        double newBalance = acc.getBalance() - amount;
+        acc.setBalance(newBalance);
+        accDAO.updateAccount(accountNo, acc);
+
+        saveTransaction(accountNo, "WITHDRAW", amount, newBalance, null, description);
+
+        return "₹" + amount + " withdrawn successfully.\nNew Balance: ₹" + newBalance;
+    }
+
+    // ==================== TRANSFER ====================
+    @Override
+    @Transactional
+    public String transfer(Long fromAccNo, Long toAccNo, double amount, String description) {
+        if (amount <= 0) return "Amount must be greater than Zero";
+        if (fromAccNo.equals(toAccNo)) return "Cannot transfer to same account";
+
+        Account fromAcc = accDAO.getAccountById(fromAccNo);
+        Account toAcc = accDAO.getAccountById(toAccNo);
+
+        if (fromAcc == null) return "Sender account not found";
+        if (toAcc == null) return "Receiver account not found";
+        if (fromAcc.getBalance() < amount) return "Insufficient Balance in Sender's Account";
+
+        // Debit from sender
+        double fromNewBalance = fromAcc.getBalance() - amount;
+        fromAcc.setBalance(fromNewBalance);
+        accDAO.updateAccount(fromAccNo, fromAcc);
+
+        // Credit to receiver
+        double toNewBalance = toAcc.getBalance() + amount;
+        toAcc.setBalance(toNewBalance);
+        accDAO.updateAccount(toAccNo, toAcc);
+
+        // Save two transactions
+        saveTransaction(fromAccNo, "TRANSFER_DEBIT", amount, fromNewBalance, toAccNo, description);
+        saveTransaction(toAccNo, "TRANSFER_CREDIT", amount, toNewBalance, fromAccNo, description);
+
+        return "Transfer successful! ₹" + amount + " from " + fromAccNo + " to " + toAccNo;
+    }
+
+    // Private helper to reduce redundancy
+    private void saveTransaction(Long accountNo, String type, double amount, double balanceAfter, Long oppositeAcc, String description) {
+        Transaction txn = new Transaction();
+        txn.setAccountNo(accountNo);
+        txn.setTxnType(type);
+        txn.setAmount(amount);
+        txn.setBalanceAfter(balanceAfter);
+        txn.setOppositeAccount(oppositeAcc);
+        txn.setDescription(description == null || description.isBlank() 
+                        ? "No Description Provided" : description);
+        txn.setTimestamp(LocalDateTime.now());
+
+        txnDAO.saveTransaction(txn);
+    }
+
+    @Override
+    public List<Transaction> getTransactionsByAccount(Long accountNo) {
+        return txnDAO.getTransactionsByAccount(accountNo);
+    }
+
+    @Override
+    public Transaction getTransactionById(Long txnId) {
+        return txnDAO.getTransactionById(txnId);
+    }
+
+    @Override
+    public List<Transaction> getMiniStatement(Long accountNo){
+        List<Transaction> allTxns = txnDAO.getTransactionsByAccount(accountNo);
+    
+    // Sabse recent pehle (timestamp descending)
+    allTxns.sort((t1, t2) -> t2.getTimestamp().compareTo(t1.getTimestamp()));
+    
+    // Sirf last 5
+    if (allTxns.size() > 5) {
+        return allTxns.subList(0, 5);
+    }
+    
+    return allTxns;
+    }
+
+    @Override
+    public StatementResponse getFullStatements(Long accountNo) {
+       Account acc = accDAO.getAccountById(accountNo);
+        if(acc == null) throw new RuntimeException("Account not Found");
+
+        List<Transaction> txns = txnDAO.getTransactionsByAccount(accountNo);
+        txns.sort((t1, t2) -> t2.getTimestamp().compareTo(t1.getTimestamp()));
+        double totalCredit = 0;
+        double totalDebit = 0;
+
+        for(Transaction txn: txns){
+            String type = txn.getTxnType().toUpperCase();
+            if(type.contains("DEPOSIT") || type.contains("CREDIT") || type.contains("TRANSFER_CREDIT")){
+                totalCredit += txn.getAmount();
+            }else{
+                totalDebit += txn.getAmount();
+            }
+        }
+        return new StatementResponse(
+            acc.getAccountNo(),
+            acc.getName(),
+            acc.getType(),
+            acc.getBalance(),
+            totalCredit,
+            totalDebit, 
+            txns.isEmpty() ? null : txns.get(txns.size()-1).getTimestamp(),
+            LocalDateTime.now(),
+            txns
+        );
+    }
+
+    @Override
+    public List<Transaction> getFullStatement(Long accountNo) {
+        List<Transaction> transactions = txnDAO.getTransactionsByAccount(accountNo);
+    
+        // Sort by timestamp - newest first
+        transactions.sort((t1, t2) -> t2.getTimestamp().compareTo(t1.getTimestamp()));
+        
+        return transactions;
+    }
+
+    @Override
+    public byte[] generateFullStatementPdf(Long accountNo) {
+        StatementResponse statement = getFullStatements(accountNo);  // reuse kiya
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf);
+        ) {
+
+            // Header
+            document.add(new Paragraph("BANKING APP - FULL STATEMENT")
+                    .setFontSize(18).setBold().setTextAlignment(TextAlignment.CENTER));
+
+            document.add(new Paragraph("Generated on: " + LocalDateTime.now())
+                    .setFontSize(10).setTextAlignment(TextAlignment.RIGHT));
+
+            // Account Details
+            document.add(new Paragraph("\nAccount Details").setBold());
+            document.add(new Paragraph("Account No     : " + statement.getAccountNo()));
+            document.add(new Paragraph("Holder Name    : " + statement.getAccountHolderName()));
+            document.add(new Paragraph("Account Type   : " + statement.getAccountType()));
+            document.add(new Paragraph("Current Balance: ₹" + String.format("%.2f", statement.getCurrentBalance())));
+
+            // Summary
+            document.add(new Paragraph("\nSummary").setBold());
+            document.add(new Paragraph("Total Credit   : ₹" + String.format("%.2f", statement.getTotalCredit())));
+            document.add(new Paragraph("Total Debit    : ₹" + String.format("%.2f", statement.getTotalDebit())));
+            document.add(new Paragraph("Net Balance    : ₹" + String.format("%.2f", statement.getCurrentBalance())));
+
+            // Transactions Table
+            document.add(new Paragraph("\nTransaction History").setBold());
+
+            Table table = new Table(UnitValue.createPercentArray(new float[]{15, 20, 20, 15, 15, 15}))
+                    .useAllAvailableWidth();
+
+            table.addHeaderCell("Date");
+            table.addHeaderCell("Type");
+            table.addHeaderCell("Description");
+            table.addHeaderCell("Amount");
+            table.addHeaderCell("Balance After");
+            table.addHeaderCell("Opposite A/c");
+
+            for (Transaction t : statement.getTxns()) {
+                table.addCell(t.getTimestamp().toLocalDate().toString());
+                table.addCell(t.getTxnType());
+                table.addCell(t.getDescription() != null ? t.getDescription() : "-");
+                table.addCell("₹" + String.format("%.2f", t.getAmount()));
+                table.addCell("₹" + String.format("%.2f", t.getBalanceAfter()));
+                table.addCell(t.getOppositeAccount() != null ? t.getOppositeAccount().toString() : "-");
+            }
+
+            document.add(table);
+            document.close();
+
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating PDF: " + e.getMessage());
+        }
+    }
+
+}
+
+
+package com.chh_shu.banking_app;
+
+
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+
+@SpringBootApplication
+@ComponentScan(basePackages = "com.chh_shu.banking_app")
+@EnableJpaRepositories(basePackages = {"com.chh_shu.banking_app.Entity", "com.chh_shu.banking_app.DAO", "com.chh_shu.banking_app.Service"})
+public class BankingAppApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(BankingAppApplication.class, args);
+	}
+
+}

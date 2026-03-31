@@ -1,0 +1,46 @@
+**Real banks mein mainly yehi important operations hote hain:**
+
+### Core / Most Common Operations (jo har banking app mein hote hain):
+
+| Operation              | Kitna Common hai | Shoul Do? |
+|------------------------|------------------|-----------|
+| Create Account         | Very High        | Yes       | // Done✔️
+| Check Balance          | Very High        | Yes       | // Done✔️
+| Deposit Money          | Very High        | Yes       | // Done✔️
+| Withdraw Money         | Very High        | Yes       | // Done✔️
+| Fund Transfer          | Very High        | Yes       | // (NEFT/RTGS/IMPS/UPI)Done✔️
+| Transaction History    | Very High        | Yes       | // Done✔️
+| Delete / Close Account | Medium           | Optional  | // Done✔️
+| Update Account Details | Medium           | Optional  | // Done✔️
+
+### Extra Operations (jo medium+ projects mein add karte hain):
+
+- Mini Statement // Done✔️
+- Full Statement (PDF download) // Done✔️
+- Fixed Deposit (FD) creation // Ongoing
+- Loan Apply / EMI payment
+- Bill Payment (Electricity, Mobile, etc.)
+- Cheque Book Request
+- Card Block / Unblock
+- Beneficiary Add / Manage
+- ATM/Branch Locator
+- Password / PIN change
+- KYC Update
+
+---
+
+### Aapke Project ke liye **Best Scope** (Resume ke liye perfect):
+
+**Abhi focus karo in 8 cheezon pe:**
+
+1. Create New Account
+2. Get Account Details
+3. Check Balance
+4. Deposit
+5. Withdraw
+6. Transfer Money (with proper debit + credit entry)
+7. Transaction History (by account)
+8. Update Account (name, type etc.) — optional
+
+Yeh 8 cheezein agar achhe se kaam kar rahi hongi + clean code + proper transaction table, toh aapka project **medium level** ke liye bahut strong dikhega.
+
