@@ -10,7 +10,7 @@
 A full-featured backend banking system built with Spring Boot, offering secure account management, fund transfers, fixed deposits, and PDF statement generation.
 
 🔗 **Live API:** [YOUR_DEPLOYED_LINK_HERE]  
-📁 **GitHub:** [YOUR_GITHUB_REPO_LINK_HERE]
+📁 **GitHub:** https://github.com/Shubhamxii2
 
 ---
 
@@ -131,9 +131,9 @@ banking_app_backend/
 ## 👨‍💻 Author
 
 **Shubham Kumar Saw**  
-📧 shubhamkuumarsaw120@gmail.com
-🔗 [YOUR_LINKEDIN_HERE]  
-💻 [YOUR_GITHUB_HERE]
+📧 [Email](shubhamkuumarsaw120@gmail.com)
+🔗 [LinkedIn](https://www.linkedin.com/in/shubham-kumar-saw-53a97330a/)  
+💻 [GitHub](https://github.com/Shubhamxii2)
 
 ---
 
