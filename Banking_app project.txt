@@ -17,7 +17,7 @@
 
 - Mini Statement // Done✔️
 - Full Statement (PDF download) // Done✔️
-- Fixed Deposit (FD) creation // Ongoing
+- Fixed Deposit (FD) creation // Done✔️
 - Loan Apply / EMI payment
 - Bill Payment (Electricity, Mobile, etc.)
 - Cheque Book Request
